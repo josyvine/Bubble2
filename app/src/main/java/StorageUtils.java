@@ -249,4 +249,42 @@ public class StorageUtils {
         DocumentFile newDir = parentDoc.createDirectory(dir.getName());
         return newDir != null && newDir.exists();
     }
+
+    public static boolean copyFile(Context context, File source, File destination) {
+        InputStream in = null;
+        OutputStream out = null;
+        try {
+            // Get input stream from source file
+            Uri sourceUri = Uri.fromFile(source);
+            in = context.getContentResolver().openInputStream(sourceUri);
+            if (in == null) {
+                Log.e(TAG, "Failed to get input stream for source file: " + source.getAbsolutePath());
+                return false;
+            }
+
+            // Get output stream to destination file
+            out = getOutputStream(context, destination);
+            if (out == null) {
+                Log.e(TAG, "Failed to get output stream for destination file: " + destination.getAbsolutePath());
+                return false;
+            }
+
+            byte[] buf = new byte[8192];
+            int len;
+            while ((len = in.read(buf)) > 0) {
+                out.write(buf, 0, len);
+            }
+            return true;
+        } catch (IOException e) {
+            Log.e(TAG, "File copy failed for source: " + source.getAbsolutePath(), e);
+            return false;
+        } finally {
+            try {
+                if (in != null) in.close();
+                if (out != null) out.close();
+            } catch (IOException e) {
+                Log.e(TAG, "Error closing streams", e);
+            }
+        }
+    }
 }
