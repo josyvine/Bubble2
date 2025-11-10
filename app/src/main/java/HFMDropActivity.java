@@ -313,15 +313,12 @@ public class HFMDropActivity extends Activity {
             return;
         }
         
-        // --- THIS IS THE NEW LOGIC FOR TCP HOLE PUNCHING ---
-        // 1. Show a progress dialog while we discover our own IP.
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
         builder.setView(R.layout.dialog_progress_simple);
         builder.setCancelable(false);
         final AlertDialog progressDialog = builder.create();
         progressDialog.show();
         
-        // 2. Start STUN client on a background thread.
         new Thread(new Runnable() {
             @Override
             public void run() {
@@ -337,7 +334,6 @@ public class HFMDropActivity extends Activity {
                             return;
                         }
 
-                        // 3. We have our IP. Now update Firestore and start the download.
                         Map<String, Object> updates = new HashMap<>();
                         updates.put("status", "accepted");
                         updates.put("receiverId", currentUser.getUid());
@@ -374,9 +370,7 @@ public class HFMDropActivity extends Activity {
                 });
             }
         }).start();
-        // --- END OF NEW LOGIC ---
 
-        // Remove from list and update UI immediately
         requestList.remove(request);
         adapter.notifyDataSetChanged();
         if (requestList.isEmpty()) {
@@ -408,9 +402,10 @@ public class HFMDropActivity extends Activity {
         public String status;
         public String receiverId;
 
-        // --- NEW: Fields for receiver's address ---
         public String receiverPublicIp;
-        public long receiverPublicPort;
+        // --- THIS IS THE FIX ---
+        // Changed from primitive 'long' to wrapper 'Long' to allow null values from Firestore.
+        public Long receiverPublicPort;
 
         public DropRequest() {}
     }
