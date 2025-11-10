@@ -312,47 +312,78 @@ public class HFMDropActivity extends Activity {
             Toast.makeText(this, "Authentication error. Please restart the app.", Toast.LENGTH_SHORT).show();
             return;
         }
+        
+        // --- THIS IS THE NEW LOGIC FOR TCP HOLE PUNCHING ---
+        // 1. Show a progress dialog while we discover our own IP.
+        final AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        builder.setView(R.layout.dialog_progress_simple);
+        builder.setCancelable(false);
+        final AlertDialog progressDialog = builder.create();
+        progressDialog.show();
+        
+        // 2. Start STUN client on a background thread.
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                final SenderService.StunClient.StunResult stunResult = SenderService.StunClient.getPublicIpAddress();
 
-        Map<String, Object> updates = new HashMap<>();
-        updates.put("status", "accepted");
-        updates.put("receiverId", currentUser.getUid());
+                runOnUiThread(new Runnable() {
+                    @Override
+                    public void run() {
+                        progressDialog.dismiss();
 
-        db.collection("drop_requests").document(request.id).update(updates)
-            .addOnSuccessListener(new OnSuccessListener<Void>() {
-                @Override
-                public void onSuccess(Void aVoid) {
-                    Log.d(TAG, "Drop request accepted. Starting download service.");
-                    
-                    // --- MODIFICATION: Start DownloadService AND the new Progress Activity ---
-                    Intent serviceIntent = new Intent(HFMDropActivity.this, DownloadService.class);
-                    serviceIntent.putExtra("drop_request_id", request.id);
-                    serviceIntent.putExtra("sender_id", request.senderId);
-                    serviceIntent.putExtra("original_filename", request.filename);
-                    serviceIntent.putExtra("cloaked_filename", request.cloakedFilename);
-                    serviceIntent.putExtra("filesize", request.filesize);
-                    ContextCompat.startForegroundService(HFMDropActivity.this, serviceIntent);
-                    
-                    // Start the progress UI
-                    Intent progressIntent = new Intent(HFMDropActivity.this, DropProgressActivity.class);
-                    progressIntent.putExtra("is_sender", false); // This is the receiver
-                    startActivity(progressIntent);
-                }
-            })
-            .addOnFailureListener(new OnFailureListener() {
-                @Override
-                public void onFailure(@NonNull Exception e) {
-                    Log.e(TAG, "Failed to accept drop request", e);
-                    Toast.makeText(HFMDropActivity.this, "Failed to accept request: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-                }
-            });
+                        if (stunResult == null) {
+                            showErrorDialog("Network discovery failed. Could not determine your public IP address to send back to the sender.");
+                            return;
+                        }
 
+                        // 3. We have our IP. Now update Firestore and start the download.
+                        Map<String, Object> updates = new HashMap<>();
+                        updates.put("status", "accepted");
+                        updates.put("receiverId", currentUser.getUid());
+                        updates.put("receiverPublicIp", stunResult.publicIp);
+                        updates.put("receiverPublicPort", stunResult.publicPort);
 
+                        db.collection("drop_requests").document(request.id).update(updates)
+                            .addOnSuccessListener(new OnSuccessListener<Void>() {
+                                @Override
+                                public void onSuccess(Void aVoid) {
+                                    Log.d(TAG, "Drop request accepted and updated. Starting download service.");
+
+                                    Intent serviceIntent = new Intent(HFMDropActivity.this, DownloadService.class);
+                                    serviceIntent.putExtra("drop_request_id", request.id);
+                                    serviceIntent.putExtra("sender_id", request.senderId);
+                                    serviceIntent.putExtra("original_filename", request.filename);
+                                    serviceIntent.putExtra("cloaked_filename", request.cloakedFilename);
+                                    serviceIntent.putExtra("filesize", request.filesize);
+                                    ContextCompat.startForegroundService(HFMDropActivity.this, serviceIntent);
+                                    
+                                    Intent progressIntent = new Intent(HFMDropActivity.this, DropProgressActivity.class);
+                                    progressIntent.putExtra("is_sender", false);
+                                    startActivity(progressIntent);
+                                }
+                            })
+                            .addOnFailureListener(new OnFailureListener() {
+                                @Override
+                                public void onFailure(@NonNull Exception e) {
+                                    Log.e(TAG, "Failed to accept drop request", e);
+                                    Toast.makeText(HFMDropActivity.this, "Failed to accept request: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                }
+                            });
+                    }
+                });
+            }
+        }).start();
+        // --- END OF NEW LOGIC ---
+
+        // Remove from list and update UI immediately
         requestList.remove(request);
         adapter.notifyDataSetChanged();
         if (requestList.isEmpty()) {
             emptyViewRequests.setVisibility(View.VISIBLE);
         }
     }
+
 
     private void handleDecline(DropRequest request) {
         Map<String, Object> updates = new HashMap<>();
@@ -376,6 +407,10 @@ public class HFMDropActivity extends Activity {
         public long filesize;
         public String status;
         public String receiverId;
+
+        // --- NEW: Fields for receiver's address ---
+        public String receiverPublicIp;
+        public long receiverPublicPort;
 
         public DropRequest() {}
     }
