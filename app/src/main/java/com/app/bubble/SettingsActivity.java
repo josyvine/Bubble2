@@ -10,6 +10,10 @@ import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.Spinner;
 
+// NEW: AdMob Imports
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.AdView;
+
 public class SettingsActivity extends Activity {
 
     // Constants for SharedPreferences to ensure consistency.
@@ -54,6 +58,11 @@ public class SettingsActivity extends Activity {
 					// Do nothing.
 				}
 			});
+
+        // NEW: Load the AdMob Banner Ad in the footer
+        AdView mAdView = findViewById(R.id.adView);
+        AdRequest adRequest = new AdRequest.Builder().build();
+        mAdView.loadAd(adRequest);
     }
 
     @Override
@@ -111,4 +120,3 @@ public class SettingsActivity extends Activity {
         editor.apply();
     }
 }
-
