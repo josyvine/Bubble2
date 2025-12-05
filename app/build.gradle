@@ -1,6 +1,5 @@
 apply plugin: 'com.android.application'
-// NEW: Apply the Google Services plugin
-apply plugin: 'com.google.gms.google-services'
+// REMOVED: apply plugin: 'com.google.gms.google-services' (This fixed the missing json error)
 
 android {
     // FIX: Added namespace required by Gradle 8.0+
@@ -48,7 +47,7 @@ dependencies {
     implementation 'androidx.multidex:multidex:2.0.1'
     implementation 'androidx.documentfile:documentfile:1.0.1'
     implementation 'androidx.lifecycle:lifecycle-runtime:2.2.0'
-    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0' // <-- ADD THIS LINE
+    implementation 'androidx.lifecycle:lifecycle-extensions:2.2.0'
     implementation 'androidx.recyclerview:recyclerview:1.1.0'
 
     // NEW: Google Mobile Ads SDK (AdMob)
