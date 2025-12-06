@@ -44,7 +44,9 @@ import com.google.android.gms.vision.text.TextBlock;
 import com.google.android.gms.vision.text.TextRecognizer;
 
 import java.nio.ByteBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -90,6 +92,12 @@ public class FloatingTranslatorService extends Service {
     private VirtualDisplay virtualDisplay;
     private ImageReader imageReader;
     private int screenWidth, screenHeight, screenDensity;
+
+    // Auto-Scroll Logic
+    private List<Bitmap> capturedBitmaps = new ArrayList<>();
+    private boolean isLongCaptureMode = false;
+    private int capturePageCount = 0;
+    private static final int MAX_PAGES = 5; // Limit to 5 pages for safety
 
     @Override
     public IBinder onBind(Intent intent) { return null; }
@@ -149,6 +157,23 @@ public class FloatingTranslatorService extends Service {
         if (floatingBubbleView != null) floatingBubbleView.setVisibility(View.VISIBLE);
 
         if (mediaProjection != null) {
+            // Check if the selection touches the bottom of the screen (indicating a desire to scroll)
+            // We use a threshold of 50 pixels from the bottom
+            if (selectedRect.bottom >= screenHeight - 50) {
+                // Only enable auto-scroll if Accessibility Service is active
+                if (GlobalScrollService.getInstance() != null) {
+                    isLongCaptureMode = true;
+                    Toast.makeText(this, "Auto-Scrolling...", Toast.LENGTH_SHORT).show();
+                } else {
+                    isLongCaptureMode = false;
+                    Toast.makeText(this, "Enable Accessibility for Scrolling", Toast.LENGTH_SHORT).show();
+                }
+            } else {
+                isLongCaptureMode = false;
+            }
+            
+            capturedBitmaps.clear();
+            capturePageCount = 0;
             startCapture(selectedRect);
         } else {
             Toast.makeText(this, "Permission not available.", Toast.LENGTH_SHORT).show();
@@ -167,7 +192,6 @@ public class FloatingTranslatorService extends Service {
                 @Override
                 public void onImageAvailable(ImageReader reader) {
                     Image image = null;
-                    Bitmap fullBitmap = null;
                     try {
                         image = reader.acquireLatestImage();
                         if (image != null) {
@@ -177,18 +201,57 @@ public class FloatingTranslatorService extends Service {
                             int rowStride = planes[0].getRowStride();
                             int rowPadding = rowStride - pixelStride * screenWidth;
 
-                            fullBitmap = Bitmap.createBitmap(screenWidth + rowPadding / pixelStride, screenHeight, Bitmap.Config.ARGB_8888);
+                            Bitmap fullBitmap = Bitmap.createBitmap(screenWidth + rowPadding / pixelStride, screenHeight, Bitmap.Config.ARGB_8888);
                             fullBitmap.copyPixelsFromBuffer(buffer);
 
-                            Bitmap croppedBitmap = Bitmap.createBitmap(fullBitmap, cropRect.left, cropRect.top, cropRect.width(), cropRect.height());
-                            performOcr(croppedBitmap);
+                            // Crop the image
+                            // Ensure coordinates are within bounds
+                            int left = Math.max(0, cropRect.left);
+                            int top = Math.max(0, cropRect.top);
+                            int width = Math.min(cropRect.width(), fullBitmap.getWidth() - left);
+                            int height = Math.min(cropRect.height(), fullBitmap.getHeight() - top);
+                            
+                            Bitmap croppedBitmap = Bitmap.createBitmap(fullBitmap, left, top, width, height);
+                            capturedBitmaps.add(croppedBitmap);
+                            fullBitmap.recycle(); // Recycle original to save memory
+
+                            capturePageCount++;
+
+                            // Logic for Unlimited Scrolling
+                            if (isLongCaptureMode && capturePageCount < MAX_PAGES) {
+                                // Perform Scroll
+                                boolean scrolled = GlobalScrollService.performGlobalScroll();
+                                if (scrolled) {
+                                    // Wait for scroll animation to finish before next capture
+                                    try {
+                                        Thread.sleep(800); // 800ms delay for scroll
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                    // The loop continues because we don't close the ImageReader or VirtualDisplay
+                                    image.close();
+                                    return; 
+                                }
+                            }
+                            
+                            // Finish capture
+                            stopCapture();
+                            
+                            // Stitch images if multiple
+                            Bitmap finalBitmap;
+                            if (capturedBitmaps.size() > 1) {
+                                finalBitmap = ImageStitcher.stitchImages(capturedBitmaps);
+                            } else {
+                                finalBitmap = capturedBitmaps.get(0);
+                            }
+                            
+                            performOcr(finalBitmap);
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
-                    } finally {
-                        if (fullBitmap != null) fullBitmap.recycle();
-                        if (image != null) image.close();
                         stopCapture();
+                    } finally {
+                        if (image != null) image.close();
                     }
                 }
             }, handler);
@@ -229,12 +292,15 @@ public class FloatingTranslatorService extends Service {
             Toast.makeText(FloatingTranslatorService.this, "No text found", Toast.LENGTH_SHORT).show();
         }
         recognizer.release();
+        // Clean up bitmaps
+        for (Bitmap b : capturedBitmaps) {
+            if (b != null && !b.isRecycled() && b != bitmap) b.recycle();
+        }
     }
 
     private void translateText(final String text) {
         if (text == null || text.isEmpty()) return;
 
-        // FIX: Added 'final' keyword to these two variables as required by Java
         final String sourceLangCode = languageCodes[Arrays.asList(languages).indexOf(currentSourceLang)];
         final String targetLangCode = languageCodes[Arrays.asList(languages).indexOf(currentTargetLang)];
 
