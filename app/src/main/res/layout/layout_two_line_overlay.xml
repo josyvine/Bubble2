@@ -6,10 +6,11 @@
 
     <!-- Helper Text -->
     <TextView
+        android:id="@+id/helper_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:text="Drag lines to select area.\nDrag Red line to bottom to scroll."
+        android:text="Place Green Line at START of text.\nClick NEXT to scroll."
         android:textColor="#FFFFFF"
         android:textSize="14sp"
         android:gravity="center"
@@ -27,6 +28,7 @@
 
     <!-- Visual Handle for Top Line -->
     <ImageView
+        android:id="@+id/handle_top"
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:src="@android:drawable/ic_menu_sort_by_size"
@@ -38,15 +40,19 @@
         android:tint="#4CAF50"/>
 
     <!-- Bottom Line (End of Selection) - Red -->
+    <!-- Initially GONE -->
     <View
         android:id="@+id/line_bottom"
         android:layout_width="match_parent"
         android:layout_height="4dp"
         android:background="#F44336"
-        android:layout_marginTop="400dp" />
+        android:layout_marginTop="400dp"
+        android:visibility="gone"/>
 
     <!-- Visual Handle for Bottom Line -->
+    <!-- Initially GONE -->
     <ImageView
+        android:id="@+id/handle_bottom"
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:src="@android:drawable/ic_menu_sort_by_size"
@@ -55,7 +61,8 @@
         android:layout_marginEnd="16dp"
         android:layout_marginTop="-14dp"
         android:contentDescription="Drag Handle"
-        android:tint="#F44336"/>
+        android:tint="#F44336"
+        android:visibility="gone"/>
 
     <!-- Action Buttons -->
     <LinearLayout
@@ -67,11 +74,12 @@
         android:layout_marginEnd="16dp"
         android:gravity="end">
 
+        <!-- Dynamic Action Button (Next -> Stop -> Copy) -->
         <Button
-            android:id="@+id/btn_done"
+            android:id="@+id/btn_action"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="COPY"
+            android:text="NEXT"
             android:textStyle="bold"
             android:backgroundTint="?android:attr/colorPrimary"
             android:textColor="#FFFFFF"
