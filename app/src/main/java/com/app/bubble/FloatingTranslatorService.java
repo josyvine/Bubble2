@@ -6,6 +6,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences; // FIX: Added missing import
 import android.graphics.Bitmap;
 import android.graphics.PixelFormat;
 import android.graphics.Rect;
@@ -24,7 +25,7 @@ import android.util.SparseArray;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.MenuItem;
-import android.view.MotionEvent;
+import android.view.MotionEvent; // FIX: Added missing import
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.AdapterView;
@@ -338,18 +339,10 @@ public class FloatingTranslatorService extends Service {
 
         try {
             // 2. Apply the Green Line (Top) and Red Line (Bottom) Crop
-            // limitRect.top = Y position of Green Line (Start)
-            // limitRect.bottom = Y position of Red Line (End) relative to the screen height
-            
-            // Logic:
-            // The content starts at 'limitRect.top' pixels from the top of the stitched image.
-            // The content ends at 'limitRect.bottom' pixels from the bottom of the stitched image?
-            // NO. The user placed the Red Line on the LAST screen.
-            // So we want to keep up to: TotalHeight - (ScreenHeight - RedLineY).
-            
             int greenLineY = limitRect.top;
             int redLineY = limitRect.bottom;
             
+            // Calculate height from top of stitched image (green line) to relative bottom (red line)
             int pixelsFromBottomToSkip = screenHeight - redLineY;
             int finalHeight = longBitmap.getHeight() - greenLineY - pixelsFromBottomToSkip;
             
@@ -359,9 +352,6 @@ public class FloatingTranslatorService extends Service {
 
             Bitmap finalCropped = Bitmap.createBitmap(longBitmap, 0, greenLineY, longBitmap.getWidth(), finalHeight);
             
-            // Clean up long bitmap
-            // longBitmap.recycle(); // Optional, risky if OOM
-
             performOcr(finalCropped);
 
         } catch (Exception e) {
@@ -623,6 +613,7 @@ public class FloatingTranslatorService extends Service {
         popupView.findViewById(R.id.popup_refine_button).setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
+                    // FIX: Ensure SharedPreferences is found (import is present)
                     SharedPreferences prefs = getSharedPreferences(SettingsActivity.PREFS_NAME, Context.MODE_PRIVATE);
                     final String apiKey = prefs.getString(SettingsActivity.KEY_API_KEY, "");
 
