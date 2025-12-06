@@ -5,6 +5,10 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- NEW: Permission to act as a Keyboard -->
+    <uses-permission android:name="android.permission.BIND_INPUT_METHOD" />
+    <!-- NEW: Permission to act as an Accessibility Service -->
+    <uses-permission android:name="android.permission.BIND_ACCESSIBILITY_SERVICE" />
 
     <application
         android:name=".MyApplication"
@@ -13,18 +17,15 @@
         android:label="bubble"
         android:roundIcon="@drawable/bubble"
         android:supportsRtl="true"
-        android:theme="@style/Theme.AppCompat.Light"> 
-        <!-- FIX: Changed theme to an AppCompat theme -->
+        android:theme="@style/Theme.AppCompat.Light">
 
         <meta-data
             android:name="com.google.android.gms.vision.DEPENDENCIES"
             android:value="ocr" />
 
-        <!-- NEW: Updated AdMob App ID -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
             android:value="ca-app-pub-2223803405403727~3540804071"/>
-
 
         <activity android:name=".MainActivity"
             android:exported="true">
@@ -34,22 +35,51 @@
             </intent-filter>
         </activity>
 
-        <!-- Registering the new Settings Activity -->
         <activity
             android:name=".SettingsActivity"
             android:label="Settings"
-            android:theme="@style/Theme.AppCompat.Light" /> 
-        <!-- FIX: Changed theme to an AppCompat theme -->
+            android:theme="@style/Theme.AppCompat.Light" />
 
-        <!-- Registering the new Help Activity -->
         <activity
             android:name=".HelpActivity"
             android:label="Help"
-            android:theme="@style/Theme.AppCompat.Light" /> 
-        <!-- FIX: Changed theme to an AppCompat theme -->
+            android:theme="@style/Theme.AppCompat.Light" />
 
         <service
             android:name=".FloatingTranslatorService"
+            android:enabled="true"
+            android:exported="false" />
+
+        <!-- NEW: Accessibility Service for Auto-Scrolling -->
+        <service
+            android:name=".GlobalScrollService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
+
+        <!-- NEW: Input Method Service for the Keyboard Extension -->
+        <service
+            android:name=".BubbleKeyboardService"
+            android:label="Bubble Keyboard"
+            android:permission="android.permission.BIND_INPUT_METHOD"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.view.InputMethod" />
+            </intent-filter>
+            <meta-data
+                android:name="android.view.im"
+                android:resource="@xml/method" />
+        </service>
+        
+        <!-- NEW: Service for the Two-Line Overlay Logic -->
+        <service
+            android:name=".TwoLineOverlayService"
             android:enabled="true"
             android:exported="false" />
 
