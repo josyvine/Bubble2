@@ -1,6 +1,10 @@
 package com.app.bubble;
 
 import android.app.Activity;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.ClipData;
 import android.content.ClipboardManager;
@@ -159,6 +163,11 @@ public class FloatingTranslatorService extends Service {
     public void onCreate() {
         super.onCreate();
         sInstance = this;
+        
+        // --- FIX: Start Foreground Service to prevent app closing ---
+        startMyForeground();
+        // ------------------------------------------------------------
+
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
         mediaProjectionManager = (MediaProjectionManager) getSystemService(Context.MEDIA_PROJECTION_SERVICE);
 
@@ -172,6 +181,45 @@ public class FloatingTranslatorService extends Service {
 
         showFloatingBubble();
         setupCloseTarget();
+    }
+    
+    // --- NEW METHOD: Creates the Notification ---
+    private void startMyForeground() {
+        String CHANNEL_ID = "bubble_translator_channel";
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    CHANNEL_ID,
+                    "Bubble Translator Service",
+                    NotificationManager.IMPORTANCE_LOW
+            );
+            ((NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE)).createNotificationChannel(channel);
+        }
+
+        // Create an intent that opens the app when you click the notification
+        Intent notificationIntent = new Intent(this, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, PendingIntent.FLAG_IMMUTABLE);
+
+        Notification notification;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            notification = new Notification.Builder(this, CHANNEL_ID)
+                    .setContentTitle("Bubble Translator is Running")
+                    .setContentText("Tap to open settings")
+                    // If you have a custom icon use R.drawable.ic_launcher, otherwise use system icon
+                    .setSmallIcon(android.R.drawable.ic_menu_search) 
+                    .setContentIntent(pendingIntent)
+                    .build();
+        } else {
+            notification = new Notification.Builder(this)
+                    .setContentTitle("Bubble Translator is Running")
+                    .setContentText("Tap to open settings")
+                    .setSmallIcon(android.R.drawable.ic_menu_search)
+                    .setContentIntent(pendingIntent)
+                    .build();
+        }
+
+        // ID must be > 0
+        startForeground(1337, notification);
     }
 
     private void setupCloseTarget() {
