@@ -25,6 +25,7 @@ public class CropSelectionView extends View {
     private long timeoutDuration; 
     
     private int screenHeight;
+    private int screenWidth;
     private static final int SCROLL_THRESHOLD = 150; // Pixels from bottom to trigger scroll
 
     public CropSelectionView(Context context) {
@@ -35,6 +36,7 @@ public class CropSelectionView extends View {
     private void init() {
         DisplayMetrics metrics = getResources().getDisplayMetrics();
         screenHeight = metrics.heightPixels;
+        screenWidth = metrics.widthPixels;
 
         paint = new Paint();
         paint.setColor(Color.argb(100, 0, 100, 255)); // Transparent blue
@@ -58,14 +60,25 @@ public class CropSelectionView extends View {
                 // Ensure we stop scrolling if the timer kills the view
                 GlobalScrollService.stopScroll();
                 
+                // Calculate the final normalized rect
+                RectF normalized = getNormalizedRect();
+
+                // Safety Check: ensure the rect has some size
+                if (normalized.width() < 10 || normalized.height() < 10) {
+                   // If too small (accidental tap), default to a reasonable size or ignore
+                   // Here we default to full screen width for safety if it was a scroll attempt
+                   normalized.left = 0;
+                   normalized.right = screenWidth;
+                }
+
                 // Tell the service that selection is finished
                 try {
                     FloatingTranslatorService service = (FloatingTranslatorService) getContext();
                     Rect finalRect = new Rect(
-                        (int) selectionRect.left,
-                        (int) selectionRect.top,
-                        (int) selectionRect.right,
-                        (int) selectionRect.bottom
+                        (int) normalized.left,
+                        (int) normalized.top,
+                        (int) normalized.right,
+                        (int) normalized.bottom
                     );
                     service.onCropFinished(finalRect);
                 } catch (ClassCastException e) {
@@ -75,15 +88,20 @@ public class CropSelectionView extends View {
         };
     }
 
+    // Helper to ensure left is always < right and top < bottom
+    private RectF getNormalizedRect() {
+        float left = Math.min(startX, endX);
+        float top = Math.min(startY, endY);
+        float right = Math.max(startX, endX);
+        float bottom = Math.max(startY, endY);
+        return new RectF(left, top, right, bottom);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        selectionRect.set(
-            Math.min(startX, endX),
-            Math.min(startY, endY),
-            Math.max(startX, endX),
-            Math.max(startY, endY)
-        );
+        selectionRect = getNormalizedRect();
+        
         // Draw the blue fill
         canvas.drawRect(selectionRect, paint);
         // Draw the border
@@ -109,6 +127,9 @@ public class CropSelectionView extends View {
                 // *** DRAG-TO-SCROLL LOGIC ***
                 // Check if finger is at the bottom edge of the screen
                 if (endY >= screenHeight - SCROLL_THRESHOLD) {
+                    // Force the selection to the absolute bottom visually
+                    endY = screenHeight; 
+                    
                     // Trigger continuous smooth scrolling
                     GlobalScrollService.startSmoothScroll();
                 } else {
