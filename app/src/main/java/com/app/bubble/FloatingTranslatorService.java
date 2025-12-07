@@ -1,3 +1,4 @@
+
 package com.app.bubble;
 
 import android.app.Activity;
@@ -172,7 +173,7 @@ public class FloatingTranslatorService extends Service {
         super.onCreate();
         sInstance = this;
 
-        // FIX: Start Foreground Service to prevent app closing/Permission Lost
+        // Start Foreground Service to prevent app closing/Permission Lost
         startMyForeground();
 
         windowManager = (WindowManager) getSystemService(WINDOW_SERVICE);
@@ -358,8 +359,7 @@ public class FloatingTranslatorService extends Service {
                                 capturedBitmaps.add(capturedFrame);
                             }
 
-                            // --- BATCH PROCESSING (Fix for Unlimited Scroll) ---
-                            // 3 frames allows unlimited scrolling safely.
+                            // Batch Processing: 3 frames allows unlimited scrolling safely.
                             if (isBurstMode && capturedBitmaps.size() >= 3) {
                                 processIntermediateChunk();
                             }
@@ -535,8 +535,11 @@ public class FloatingTranslatorService extends Service {
                     if (box != null) {
                         // FILTER LOGIC:
                         // If minY == -1, it means "Read Everything" (Scroll Mode / Normal Bubble)
-                        // If minY > 0, check if the text is strictly between lines (Single Screen Mode)
-                        boolean isInside = (minY == -1) || (box.top >= minY && box.bottom <= maxY);
+                        // If minY > 0, check if the CENTER of the text is between lines.
+                        // FIX: Use centerY() instead of top/bottom bounds. This prevents strict filtering
+                        // from deleting text that touches the line, fixing the "||" issue.
+                        int centerY = box.centerY();
+                        boolean isInside = (minY == -1) || (centerY >= minY && centerY <= maxY);
                         
                         if (isInside) {
                             sb.append(line.getText()).append(" ");
