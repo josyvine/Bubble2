@@ -29,10 +29,10 @@ import com.google.android.gms.tasks.Task;
 public class MainActivity extends Activity { // It is now Activity, NOT AppCompatActivity
     private static final int OVERLAY_PERMISSION_REQ_CODE = 1234;
     private static final int SCREEN_CAPTURE_REQ_CODE = 5678;
-
+    
     // NEW: Request code for In-App Update
     private static final int APP_UPDATE_REQUEST_CODE = 999;
-
+    
     // NEW: App Update Manager
     private AppUpdateManager appUpdateManager;
 
@@ -43,25 +43,25 @@ public class MainActivity extends Activity { // It is now Activity, NOT AppCompa
 
         Button startButton = findViewById(R.id.startButton);
         startButton.setOnClickListener(new View.OnClickListener() {
-                                @Override
-                                public void onClick(View v) {
-                                        if (checkOverlayPermission()) {
-                                                requestScreenCapture();
-                                        }
-                                }
-                        });
-
+				@Override
+				public void onClick(View v) {
+					if (checkOverlayPermission()) {
+						requestScreenCapture();
+					}
+				}
+			});
+            
         // NEW: Check for immediate updates when app starts
         appUpdateManager = AppUpdateManagerFactory.create(this);
         checkForAppUpdate();
 
         // NEW: Prompt user to enable advanced features (Keyboard & Auto-Scroll)
         checkAndPromptForServices();
-
+        
         // CHECK: Handle auto-restart request from Service (Fix for "Permission Not Available")
         handleAutoPermissionRequest(getIntent());
     }
-
+    
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
@@ -140,7 +140,7 @@ public class MainActivity extends Activity { // It is now Activity, NOT AppCompa
             public void onSuccess(AppUpdateInfo appUpdateInfo) {
                 if (appUpdateInfo.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
                         && appUpdateInfo.isUpdateTypeAllowed(AppUpdateType.IMMEDIATE)) {
-
+                    
                     try {
                         appUpdateManager.startUpdateFlowForResult(
                                 appUpdateInfo,
@@ -159,7 +159,7 @@ public class MainActivity extends Activity { // It is now Activity, NOT AppCompa
     @Override
     protected void onResume() {
         super.onResume();
-
+        
         appUpdateManager
             .getAppUpdateInfo()
             .addOnSuccessListener(new com.google.android.gms.tasks.OnSuccessListener<AppUpdateInfo>() {
@@ -202,7 +202,7 @@ public class MainActivity extends Activity { // It is now Activity, NOT AppCompa
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-
+        
         // NEW: Handle the result of the In-App Update
         if (requestCode == APP_UPDATE_REQUEST_CODE) {
             if (resultCode != RESULT_OK) {
@@ -228,11 +228,17 @@ public class MainActivity extends Activity { // It is now Activity, NOT AppCompa
                 serviceIntent.putExtra("data", data);
                 // Clear any previous auto-restart flags
                 serviceIntent.removeExtra("AUTO_REQUEST_PERMISSION");
-
-                // FIX: Reverted to startService to prevent immediate crash on Android O+
-                // because we are not showing a Notification immediately.
-                startService(serviceIntent);
-
+                
+                // IMPORTANT FIX:
+                // Now that FloatingTranslatorService handles notifications properly,
+                // we MUST use startForegroundService on Android O+ to prevent the app
+                // from being killed when you open WhatsApp/Browser.
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent);
+                } else {
+                    startService(serviceIntent);
+                }
+                
                 // We do NOT finish() here if it was an auto-request, so the user sees the app state
                 // But for standard flow, we usually finish or moveTaskToBack.
                 moveTaskToBack(true);
