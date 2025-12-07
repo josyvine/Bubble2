@@ -19,7 +19,7 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.AppCompat.Light">
 
-        <!-- FIX: Updated Metadata for ML Kit (New OCR Engine) -->
+        <!-- Updated Metadata for ML Kit (New OCR Engine) -->
         <meta-data
             android:name="com.google.mlkit.vision.DEPENDENCIES"
             android:value="ocr" />
@@ -44,6 +44,12 @@
         <activity
             android:name=".HelpActivity"
             android:label="Help"
+            android:theme="@style/Theme.AppCompat.Light" />
+
+        <!-- NEW: Debug Activity Registration -->
+        <activity
+            android:name=".DebugActivity"
+            android:label="Debug Mode"
             android:theme="@style/Theme.AppCompat.Light" />
 
         <service
@@ -77,7 +83,7 @@
                 android:name="android.view.im"
                 android:resource="@xml/method" />
         </service>
-        
+
         <!-- Service for the Two-Line Overlay Logic -->
         <service
             android:name=".TwoLineOverlayService"
