@@ -57,6 +57,26 @@ public class MainActivity extends Activity { // It is now Activity, NOT AppCompa
 
         // NEW: Prompt user to enable advanced features (Keyboard & Auto-Scroll)
         checkAndPromptForServices();
+
+        // CHECK: Handle auto-restart request from Service (Fix for "Permission Not Available")
+        handleAutoPermissionRequest(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        // If the service sends the user back here while the activity is in background
+        handleAutoPermissionRequest(intent);
+    }
+
+    private void handleAutoPermissionRequest(Intent intent) {
+        if (intent != null && intent.getBooleanExtra("AUTO_REQUEST_PERMISSION", false)) {
+            // Service requested a permission restart. Check overlay first, then pop dialog.
+            if (checkOverlayPermission()) {
+                requestScreenCapture();
+            }
+        }
     }
 
     // NEW: Check if services are enabled and show dialog if not
@@ -206,8 +226,18 @@ public class MainActivity extends Activity { // It is now Activity, NOT AppCompa
                 Intent serviceIntent = new Intent(this, FloatingTranslatorService.class);
                 serviceIntent.putExtra("resultCode", resultCode);
                 serviceIntent.putExtra("data", data);
-                startService(serviceIntent);
-                finish();
+                // Clear any previous auto-restart flags
+                serviceIntent.removeExtra("AUTO_REQUEST_PERMISSION");
+                
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(serviceIntent);
+                } else {
+                    startService(serviceIntent);
+                }
+                
+                // We do NOT finish() here if it was an auto-request, so the user sees the app state
+                // But for standard flow, we usually finish or moveTaskToBack.
+                moveTaskToBack(true);
             } else {
                 Toast.makeText(this, "Screen capture permission denied", Toast.LENGTH_SHORT).show();
             }
