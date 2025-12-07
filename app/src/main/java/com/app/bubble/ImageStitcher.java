@@ -39,6 +39,7 @@ public class ImageStitcher {
         int height = top.getHeight() + bottom.getHeight() - overlap;
 
         // Limit height to avoid crashes (texture size limit usually 4096 or 8192)
+        // If it gets too long, we stop growing to prevent crash.
         if (height > 8000) height = 8000;
 
         try {
@@ -49,17 +50,21 @@ public class ImageStitcher {
             canvas.drawBitmap(top, 0, 0, null);
 
             // Draw the bottom image, shifted up by the overlap amount so visuals align
+            // relative to the bottom of the top image.
+            // Formula: Y = top.getHeight() - overlap
             canvas.drawBitmap(bottom, 0, top.getHeight() - overlap, null);
 
-            // Recycle old bitmaps to free memory
-            // Note: In a real app, verify these aren't used elsewhere before recycling
+            // Recycle old bitmaps to free memory.
+            // IMPORTANT: Only recycle 'top' if it was an intermediate result (not the original first frame).
+            // For safety in this context, we rely on the GC or caller to clean up originals, 
+            // but explicit recycling here helps significantly with "Burst Mode".
             // top.recycle(); 
             // bottom.recycle();
 
             return result;
         } catch (OutOfMemoryError e) {
             e.printStackTrace();
-            return top; // Fallback
+            return top; // Fallback to just the top image if we run out of RAM
         }
     }
 
@@ -73,15 +78,19 @@ public class ImageStitcher {
         int bottomHeight = bottom.getHeight();
 
         // We assume the scroll isn't huge (e.g. not more than 50% of screen at a time)
-        // We look at the bottom 20% of the top image
-        int searchHeight = topHeight / 5; 
+        // We look at the bottom 30% of the top image
+        int searchHeight = topHeight / 3; 
         
         // Safety check
         if (searchHeight > bottomHeight) searchHeight = bottomHeight;
 
-        // Define a "signature" row from the bottom of the top image
-        // We pick a row 10 pixels from the bottom
-        int referenceRowY = topHeight - 10;
+        // Define a "signature" row from the bottom of the top image.
+        // CHANGED: Instead of 10px from bottom, use 150px from bottom.
+        // This avoids bottom navigation bars or static footers interfering with the match.
+        int offsetFromBottom = 150;
+        if (topHeight < 300) offsetFromBottom = 20; // fallback for small images
+
+        int referenceRowY = topHeight - offsetFromBottom;
         int[] referencePixels = new int[width];
         top.getPixels(referencePixels, 0, width, 0, referenceRowY, width, 1);
 
@@ -93,11 +102,9 @@ public class ImageStitcher {
 
             if (arraysSimilar(referencePixels, comparePixels)) {
                 // Match found!
-                // The overlap is the distance from the match in bottom image
-                // back to the logical start relative to the top image.
-                // Overlap = (Pixels remaining in top image after ref row) + (Pixels in bottom image up to match)
-                // Roughly: overlap = 10 + y
-                return 10 + y;
+                // The overlap is: (distance from ref row to bottom of top img) + (distance from top of bottom img to match)
+                // Overlap = offsetFromBottom + y
+                return offsetFromBottom + y;
             }
         }
 
@@ -121,7 +128,8 @@ public class ImageStitcher {
             }
         }
 
-        // If 80% of pixels match, we assume it's the same row
-        return matches > (totalChecked * 0.8);
+        // CHANGED: Increased strictness from 0.8 (80%) to 0.9 (90%)
+        // This ensures we don't accidentally stitch lines that just happen to have similar whitespace.
+        return matches > (totalChecked * 0.9);
     }
 }
