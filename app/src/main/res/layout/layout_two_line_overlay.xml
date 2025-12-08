@@ -4,13 +4,13 @@
     android:layout_height="match_parent"
     android:background="#40000000">
 
-    <!-- Helper Text --> 
+    <!-- Helper Text -->
     <TextView
         android:id="@+id/helper_text"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_centerInParent="true"
-        android:text="1. Frame Text\n2. Click ADD\n3. Scroll & Repeat\n4. Click DONE"
+        android:text="1. Frame Text\n2. Click ADD\n3. Scroll &amp; Repeat\n4. Click DONE"
         android:textColor="#FFFFFF"
         android:textSize="14sp"
         android:gravity="center"
@@ -40,7 +40,6 @@
         android:tint="#4CAF50"/>
 
     <!-- Bottom Line (End of Selection) - Red -->
-    <!-- Changed to VISIBLE so you can frame text immediately -->
     <View
         android:id="@+id/line_bottom"
         android:layout_width="match_parent"
@@ -50,7 +49,6 @@
         android:visibility="visible"/>
 
     <!-- Visual Handle for Bottom Line -->
-    <!-- Changed to VISIBLE -->
     <ImageView
         android:id="@+id/handle_bottom"
         android:layout_width="40dp"
