@@ -19,14 +19,14 @@ import android.widget.Toast;
 public class TwoLineOverlayService extends Service {
 
     private WindowManager windowManager;
-    
+
     // Window 1: The Lines (Full Screen)
     private View linesView;
     private WindowManager.LayoutParams linesParams;
     private View lineTop, lineBottom;
     private ImageView handleTop, handleBottom;
     private TextView helperText;
-    
+
     // Window 2: The Controls (Bottom Only)
     private View controlsView;
     private WindowManager.LayoutParams controlsParams;
@@ -35,7 +35,7 @@ public class TwoLineOverlayService extends Service {
 
     private int currentState = 0; // 0=Set Green, 1=Scrolling, 2=Set Red
     private int screenHeight;
-    
+
     // For Touch Logic
     private View activeDragView = null;
     private View activeHandleView = null;
@@ -64,7 +64,7 @@ public class TwoLineOverlayService extends Service {
         linesView = inflater.inflate(R.layout.layout_two_line_overlay, null);
         linesView.findViewById(R.id.btn_action).setVisibility(View.GONE);
         linesView.findViewById(R.id.btn_close).setVisibility(View.GONE);
-        
+
         lineTop = linesView.findViewById(R.id.line_top);
         handleTop = linesView.findViewById(R.id.handle_top);
         lineBottom = linesView.findViewById(R.id.line_bottom);
@@ -75,10 +75,9 @@ public class TwoLineOverlayService extends Service {
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 type,
-                // FLAG_SECURE prevents this overlay from appearing in screenshots/recordings
+                // FIX: REMOVED FLAG_SECURE so the screenshot is not black
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | 
-                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN | 
-                WindowManager.LayoutParams.FLAG_SECURE, 
+                WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN, 
                 PixelFormat.TRANSLUCENT
         );
         windowManager.addView(linesView, linesParams);
@@ -98,9 +97,8 @@ public class TwoLineOverlayService extends Service {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 type,
-                // FLAG_SECURE prevents buttons (STOP/COPY) from appearing in OCR results
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | 
-                WindowManager.LayoutParams.FLAG_SECURE, 
+                // FIX: REMOVED FLAG_SECURE here as well
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE, 
                 PixelFormat.TRANSLUCENT
         );
         controlsParams.gravity = Gravity.BOTTOM | Gravity.END;
@@ -128,17 +126,17 @@ public class TwoLineOverlayService extends Service {
                 if (currentState == 0) {
                     // STATE: GREEN LINE SET -> START SCROLLING
                     currentState = 1;
-                    
+
                     handleTop.setVisibility(View.GONE);
                     helperText.setText("Scroll to end of text.\nClick STOP when done.");
-                    
+
                     btnAction.setText("STOP SCROLL");
                     btnAction.setBackgroundColor(0xFFFF0000); // Red
 
                     // Make Lines Window "Pass Through" so user can scroll browser
+                    // FIX: REMOVED FLAG_SECURE
                     linesParams.flags = WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE | 
-                                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE |
-                                      WindowManager.LayoutParams.FLAG_SECURE;
+                                      WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE;
                     windowManager.updateViewLayout(linesView, linesParams);
 
                     FloatingTranslatorService service = FloatingTranslatorService.getInstance();
@@ -152,14 +150,14 @@ public class TwoLineOverlayService extends Service {
                     if (service != null) service.stopBurstCapture();
 
                     // Make Lines Window Touchable again
+                    // FIX: REMOVED FLAG_SECURE
                     linesParams.flags = WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE | 
-                                      WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN |
-                                      WindowManager.LayoutParams.FLAG_SECURE;
+                                      WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN;
                     windowManager.updateViewLayout(linesView, linesParams);
 
                     lineBottom.setVisibility(View.VISIBLE);
                     handleBottom.setVisibility(View.VISIBLE);
-                    
+
                     helperText.setText("Place Red Line at END of text.");
                     btnAction.setText("COPY");
                     btnAction.setBackgroundColor(0xFF4CAF50); // Green
@@ -206,7 +204,7 @@ public class TwoLineOverlayService extends Service {
                 if (currentState == 1) return false;
 
                 float rawY = event.getRawY();
-                
+
                 // Sensitivity threshold (how close you need to be to grab a line)
                 int threshold = 150; 
 
@@ -247,7 +245,7 @@ public class TwoLineOverlayService extends Service {
                         if (activeDragView != null) {
                             float dY = rawY - initialTouchY;
                             float newY = initialViewY + dY;
-                            
+
                             // Clamp to screen bounds
                             if (newY < 0) newY = 0;
                             if (newY > screenHeight - activeDragView.getHeight()) newY = screenHeight - activeDragView.getHeight();
