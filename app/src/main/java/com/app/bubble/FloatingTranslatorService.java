@@ -268,7 +268,9 @@ public class FloatingTranslatorService extends Service {
     }
 
     public void stopBurstCapture() {
-        isBurstMode = false;
+        // FIX: Do NOT set isBurstMode = false here. 
+        // If we do, pending frames will trigger "Single Shot" logic and open Debug Screen early.
+        // We let isBurstMode stay true, and only stop the camera.
         stopCapture(); 
     }
 
@@ -280,6 +282,8 @@ public class FloatingTranslatorService extends Service {
         if (floatingBubbleView != null) floatingBubbleView.setVisibility(View.VISIBLE);
 
         if (mediaProjection != null) {
+            // FIX: Explicitly set Single Shot mode here before starting capture
+            isBurstMode = false;
             this.currentCropRect = selectedRect;
             capturedBitmaps.clear();
             startCapture(selectedRect);
@@ -361,6 +365,9 @@ public class FloatingTranslatorService extends Service {
                                 processIntermediateChunk();
                             }
 
+                            // FIX: Only trigger single shot if we are absolutely sure it's not burst mode.
+                            // Since we removed 'isBurstMode = false' from stopBurstCapture, this block
+                            // will NOT run when you click "Stop Scroll", preventing the bug.
                             if (!isBurstMode) {
                                 stopCapture();
                                 processSingleShotResult();
@@ -421,8 +428,7 @@ public class FloatingTranslatorService extends Service {
                 }
 
                 if (stitched != null) {
-                    // FIX: Pass 'false' to indicate this is BACKGROUND processing. 
-                    // Do NOT show debug screen yet.
+                    // PASS FALSE: This is background processing. NO Debug Screen.
                     performOcrWithFilter(stitched, -1, -1, false);
                     isFirstChunk = false;
                 }
@@ -484,13 +490,13 @@ public class FloatingTranslatorService extends Service {
                 if (stitched != null) {
                     // Use Coordinate Filtering
                     if (isSingleScreen) {
-                        // FIX: Pass 'true' because this IS the final user action. Show Debug.
+                        // PASS TRUE: This is final. Show Debug Screen.
                         performOcrWithFilter(stitched, limitRect.top, limitRect.bottom, true);
                     } else {
                         // Scrolling Logic
                         int statusBarCut = 70; 
                         int adjustedBottom = Math.max(0, limitRect.bottom - statusBarCut);
-                        // FIX: Pass 'true' because this IS the final user action. Show Debug.
+                        // PASS TRUE: This is final. Show Debug Screen.
                         performOcrWithFilter(stitched, 0, adjustedBottom, true);
                     }
                 }
@@ -498,7 +504,7 @@ public class FloatingTranslatorService extends Service {
         });
     }
 
-    // FIX: Added 'isFinal' boolean to control Debug Screen launch
+    // FIX: 'isFinal' boolean controls Debug Screen launch
     private void performOcrWithFilter(Bitmap bitmap, final int minY, final int maxY, boolean isFinal) {
         if (bitmap == null) return;
         
@@ -539,8 +545,7 @@ public class FloatingTranslatorService extends Service {
             }
 
             // === LAUNCH IN-APP DEBUG SCREEN ===
-            // FIX: Only launch if this is the FINAL result (isFinal == true)
-            // This prevents the screen from popping up while scrolling background chunks.
+            // Only launch if this is the FINAL result (isFinal == true)
             if (isFinal) {
                 
                 // Populate Static Variables in DebugActivity
@@ -555,7 +560,7 @@ public class FloatingTranslatorService extends Service {
                 debugIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
                 startActivity(debugIntent);
                 
-                // STOP HERE. Do not show the translation popup. 
+                // STOP HERE. 
                 return;
             }
 
@@ -574,9 +579,7 @@ public class FloatingTranslatorService extends Service {
     // FIX: Updated Normal Bubble OCR Wrapper
     private void performOcr(Bitmap bitmap) {
         executor.execute(() -> {
-            // Normal Bubble is single shot, so we consider it 'Final' if we want debug there too.
-            // But usually, Two-Line is the one needing debug. 
-            // We pass 'true' here just in case you use debug mode on normal bubbles too.
+            // Single shot bubble is always final
             performOcrWithFilter(bitmap, -1, -1, true);
         });
     }
