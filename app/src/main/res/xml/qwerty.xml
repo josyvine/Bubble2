@@ -5,7 +5,7 @@
     android:verticalGap="0px"
     android:keyHeight="55dp">
 
-    <!-- ROW 1: Numbers/Letters Top -->
+    <!-- ROW 1 -->
     <Row>
         <Key android:codes="113" android:keyLabel="q" android:keyEdgeFlags="left"/>
         <Key android:codes="119" android:keyLabel="w"/>
@@ -19,7 +19,7 @@
         <Key android:codes="112" android:keyLabel="p" android:keyEdgeFlags="right"/>
     </Row>
 
-    <!-- ROW 2: Middle Row -->
+    <!-- ROW 2 -->
     <Row>
         <Key android:codes="97" android:keyLabel="a" android:keyEdgeFlags="left"/>
         <Key android:codes="115" android:keyLabel="s"/>
@@ -32,9 +32,9 @@
         <Key android:codes="108" android:keyLabel="l" android:keyEdgeFlags="right"/>
     </Row>
 
-    <!-- ROW 3: Shift, Bottom Letters, Backspace -->
+    <!-- ROW 3 -->
     <Row>
-        <!-- SHIFT KEY (Icon) -->
+        <!-- Shift Key (Icon) -->
         <Key android:codes="-1" 
              android:keyIcon="@drawable/ic_key_shift" 
              android:keyWidth="15%p" 
@@ -50,7 +50,7 @@
         <Key android:codes="110" android:keyLabel="n"/>
         <Key android:codes="109" android:keyLabel="m"/>
         
-        <!-- BACKSPACE KEY (Icon) -->
+        <!-- Backspace Key (Icon) -->
         <Key android:codes="-5" 
              android:keyIcon="@drawable/ic_key_backspace" 
              android:keyWidth="15%p" 
@@ -58,38 +58,30 @@
              android:keyEdgeFlags="right"/>
     </Row>
 
-    <!-- ROW 4: Symbols, Emoji, Punctuation, Space, Enter -->
+    <!-- ROW 4 -->
     <Row>
-        <!-- SYMBOL SWITCH (?123) -->
+        <!-- FIX IS HERE: Escaped the ? with a backslash -->
         <Key android:codes="-2" 
-             android:keyLabel="?123" 
+             android:keyLabel="\?123" 
              android:keyWidth="15%p" 
              android:keyEdgeFlags="left"/>
         
-        <!-- EMOJI KEY (Icon) -->
-        <!-- Code -100 handled in Service to toggle Palette -->
+        <!-- Emoji Key (Icon) -->
         <Key android:codes="-100" 
              android:keyIcon="@drawable/ic_key_emoji" 
              android:keyWidth="10%p"/>
         
-        <!-- COMMA (Front Face) -->
-        <Key android:codes="44" 
-             android:keyLabel="," 
-             android:keyWidth="10%p"/>
+        <Key android:codes="44" android:keyLabel="," android:keyWidth="10%p"/>
         
-        <!-- SPACE BAR (Icon or Label) -->
-        <!-- Width = 35% -->
+        <!-- Space Key (Icon) -->
         <Key android:codes="32" 
              android:keyIcon="@drawable/ic_key_space" 
              android:keyWidth="35%p" 
              android:isRepeatable="true"/>
         
-        <!-- PERIOD (Front Face) -->
-        <Key android:codes="46" 
-             android:keyLabel="." 
-             android:keyWidth="10%p"/>
+        <Key android:codes="46" android:keyLabel="." android:keyWidth="10%p"/>
         
-        <!-- ENTER KEY (Icon) -->
+        <!-- Enter Key (Icon) -->
         <Key android:codes="-4" 
              android:keyIcon="@drawable/ic_key_enter" 
              android:keyWidth="20%p" 
